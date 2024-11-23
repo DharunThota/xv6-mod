@@ -91,3 +91,26 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+ sys_hello(void) {
+    printf("Hello world\n");
+    return 12;
+ }
+
+uint64
+sys_signal(void) {
+    int signum;
+    uint64 handler;
+    // printf("\nIn sys_signal function\n");
+    // Retrieve the signal number and the handler address
+    argint(0, &signum);
+    argaddr(1, &handler);
+    // Only handle SIGINT for now
+    if (signum != SIGINT)
+        return -1;
+    // Set the signal handler for the process
+    struct proc *p = myproc();
+    p->sig_handlers[SIGINT] = (void (*)(int))handler;
+    return 0;
+}

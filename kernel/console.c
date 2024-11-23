@@ -132,8 +132,7 @@ consoleread(int user_dst, uint64 dst, int n)
 // do erase/kill processing, append to cons.buf,
 // wake up consoleread() if a whole line has arrived.
 //
-void
-consoleintr(int c)
+void consoleintr(int c)
 {
   acquire(&cons.lock);
 
@@ -149,6 +148,29 @@ consoleintr(int c)
     }
     break;
   case C('H'): // Backspace
+      if(cons.e != cons.w){
+      cons.e--;
+      consputc(BACKSPACE);
+    }
+    break;
+  case C('C'):  // Handle Ctrl+C for SIGINT
+    // When Ctrl+C is pressed, set the killed flag to terminate the foreground process
+    {
+      struct proc *p = myproc();  // Get the current process
+      if (p != 0) {  // Ensure the process is valid
+        printf("\nDetected Ctrl+C\n");
+        if(p->sig_handlers[2] != 0){
+          printf("Calling custom SIGINT handler\n");
+          p->sig_handlers[2](SIGINT);
+        }
+        else{
+          sigint_default_handler();
+        }
+        p->killed = 1;  // Set the killed flag to terminate the process
+        // Optionally: You can also trigger a signal handler in user space if defined
+      }
+    }
+    break;
   case '\x7f': // Delete key
     if(cons.e != cons.w){
       cons.e--;
@@ -174,7 +196,7 @@ consoleintr(int c)
     }
     break;
   }
-  
+
   release(&cons.lock);
 }
 

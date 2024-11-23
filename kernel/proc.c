@@ -55,6 +55,9 @@ procinit(void)
       initlock(&p->lock, "proc");
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
+      for (int i = 0; i < 32; i++) {
+        p->sig_handlers[i] = 0;  // Initialize handlers to NULL
+      }
   }
 }
 
@@ -692,4 +695,29 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+void
+handle_signals(void)
+{
+  struct proc *p = myproc();
+  // Check if SIGINT is pending
+  if (p->pending_signals & (1 << SIGINT)) {
+    p->pending_signals &= ~(1 << SIGINT);  // Clear the signal
+    // Check if a custom handler is set
+    if (p->sig_handlers[SIGINT]) {
+      p->trapframe->epc = (uint64)p->sig_handlers[SIGINT];
+    } else {
+      // Default action if no handler: terminate the process
+      p->killed = 1;
+    }
+  }
+}
+// Default handler for SIGINT (terminates the process)
+void
+sigint_default_handler(void)
+{
+  struct proc *p = myproc();
+  p->killed = 1;  // Mark the process for termination
+  printf("Custom SIGINT handler triggered\n");
 }
